@@ -1,12 +1,12 @@
-# trnabbefeld@hbs.net - 2024-09-30, 2024-09-30
+# trnabbefeld@hbs.net - 2024-09-30, 2025-09-15
 Set-StrictMode -Version Latest
-$ErrorActionPreference = 'Stop'
+#$ErrorActionPreference = 'Stop'
 $InformationPreference = 'Continue'
 
-Connect-MgGraph -Scope "DeviceManagementConfiguration.Read.All", "DeviceManagementApps.Read.All" -NoWelcome
+Connect-MgGraph -Scope "DeviceManagementConfiguration.Read.All", "DeviceManagementApps.Read.All" -NoWelcome -Environment "USGov"
 
 # Define the company name and current date
-$companyName = (Get-MgOrganization).DisplayName
+$companyName = "MMG"
 $date = (Get-Date -Format "yyyy-MM-dd")
 
 # Get the desktop path of the current user
@@ -17,6 +17,18 @@ $folderName = "$companyName Intune Reports $date"
 
 # Combine the desktop path and folder name
 $parentFolder = Join-Path -Path $desktopPath -ChildPath $folderName
+
+function CleanPolicyName {
+    param (
+        [string]$PolicyName
+    )
+    $invalidChars = [System.IO.Path]::GetInvalidFileNameChars()
+    foreach ($char in $invalidChars) {
+        $PolicyName = $PolicyName -replace [regex]::Escape($char), "_"
+    }
+    return $PolicyName
+}
+
 
 function New-Report {
     param (
@@ -164,6 +176,7 @@ function Get-SettingCatalogs {
         # Log
         $Id = $_.Id
         $name = $_.name
+        $cleanName = CleanPolicyName -PolicyName $name
         $_.templateReference.TemplateFamily
         write-host "Fetching Setting Catalog $name ($Id)"
 
@@ -196,10 +209,10 @@ function Get-SettingCatalogs {
 
         # Save report to csv file
         if ($_.templateReference.TemplateFamily -ne "baseline") {
-            $csvFilePath = Join-Path -Path $SettingCatalogFolder -ChildPath "$($name).csv"
+            $csvFilePath = Join-Path -Path $SettingCatalogFolder -ChildPath "$($cleanName).csv"
         }
         else {
-            $csvFilePath = Join-Path -Path $SecurityBaselinesFolder -ChildPath "$($name).csv"
+            $csvFilePath = Join-Path -Path $SecurityBaselinesFolder -ChildPath "$($cleanName).csv"
         }
         $data | Export-Csv -Path $csvFilePath 
         
@@ -284,6 +297,7 @@ function Get-ConfigurationPolicies {
     $configurationPolicies.value | ForEach-Object {
         $Id = $_.Id
         $name = $_.displayName
+        $cleanName = CleanPolicyName -PolicyName $name
 
         #Log
         write-host "Fetching Configuration Policy $name ($Id)"
@@ -298,7 +312,7 @@ function Get-ConfigurationPolicies {
         $data | Out-GridView -Title $name
 
         # Save report to csv file
-        $csvFilePath = Join-Path -Path $ConfigurationPoliciesFolder -ChildPath "$($name).csv"
+        $csvFilePath = Join-Path -Path $ConfigurationPoliciesFolder -ChildPath "$($cleanName).csv"
         $data | Export-Csv -Path $csvFilePath 
     }
 }
@@ -318,6 +332,7 @@ function Get-AdmxPolicies {
         $data = @()
         $Id = $_.Id
         $name = $_.displayName
+        $cleanName = CleanPolicyName -PolicyName $name
 
         # Log
         write-host "Fetching Administrative Policy $name ($Id)"
@@ -365,7 +380,8 @@ function Get-AdmxPolicies {
         $data | Out-GridView -Title $name
 
         # Save report to csv file
-        $csvFilePath = Join-Path -Path $AdmxTemplatesFolder -ChildPath "$($name).csv"
+        $cleanName
+        $csvFilePath = Join-Path -Path $AdmxTemplatesFolder -ChildPath "$($cleanName).csv"
         $data | Export-Csv -Path $csvFilePath 
     }
 }
@@ -386,6 +402,7 @@ function Get-CompliancePolicies {
     $compliancePolicies | ForEach-Object {
         $Id = $_.Id
         $name = $_.displayName
+        $cleanName = CleanPolicyName -PolicyName $name
 
         # Log
         write-host "Fetching Complaince Policy $name ($Id)"
@@ -418,7 +435,7 @@ function Get-CompliancePolicies {
         $data | Out-GridView -Title $name
 
         # Save report to csv file
-        $csvFilePath = Join-Path -Path $CompliancePoliciesFolder -ChildPath "$($name).csv"
+        $csvFilePath = Join-Path -Path $CompliancePoliciesFolder -ChildPath "$($cleanName).csv"
         $data | Export-Csv -Path $csvFilePath 
     }
 }
@@ -436,6 +453,7 @@ function Get-Applications {
     $applications.value | ForEach-Object {
         $Id = $_.Id
         $name = $_.displayName
+        $cleanName = CleanPolicyName -PolicyName $name
         write-host "Fetching Application $name ($Id)"
 
         # Initialize an empty array to hold the application details in row format
@@ -493,7 +511,7 @@ function Get-Applications {
         $data | Out-GridView -Title $name
 
         # Save report to csv file
-        $csvFilePath = Join-Path -Path $ApplicationsFolder -ChildPath "$($name).csv"
+        $csvFilePath = Join-Path -Path $ApplicationsFolder -ChildPath "$($cleanName).csv"
         $data | Export-Csv -Path $csvFilePath 
     }
 }
@@ -513,6 +531,7 @@ function Get-Scripts {
     foreach ($script in $scripts.value) {
         $Id = $script.Id
         $name = $script.displayName
+        $cleanName = CleanPolicyName -PolicyName $name
 
         #Log
         write-host "Fetching Script $name ($Id)"
@@ -529,7 +548,7 @@ function Get-Scripts {
         $data | Out-GridView -Title $name
 
         # Save report to csv file
-        $csvFilePath = Join-Path -Path $ScriptsFolder -ChildPath "$($name).csv"
+        $csvFilePath = Join-Path -Path $ScriptsFolder -ChildPath "$($cleanName).csv"
         $data | Export-Csv -Path $csvFilePath
     }
 }
@@ -547,6 +566,7 @@ function Get-Intents {
     $intents.value | ForEach-Object {
         $Id = $_.Id
         $name = $_.displayName
+        $cleanName = CleanPolicyName -PolicyName $name
         
         # Log
         write-host "Fetching Intent "$name" ($Id)"
@@ -576,7 +596,7 @@ function Get-Intents {
         $data | Out-GridView -Title $name
 
         # Save report to csv file
-        $csvFilePath = Join-Path -Path $IntentsFolder -ChildPath "$($name).csv"
+        $csvFilePath = Join-Path -Path $IntentsFolder -ChildPath "$($cleanName).csv"
         $data | Export-Csv -Path $csvFilePath
     }
 }
