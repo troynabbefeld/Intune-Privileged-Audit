@@ -6,7 +6,7 @@ $InformationPreference = 'Continue'
 Connect-MgGraph -Scope "DeviceManagementConfiguration.Read.All", "DeviceManagementApps.Read.All" -NoWelcome -Environment "USGov"
 
 # Define the company name and current date
-$companyName = "MMG"
+$companyName = (Get-MgOrganization).DisplayName
 $date = (Get-Date -Format "yyyy-MM-dd")
 
 # Get the desktop path of the current user
